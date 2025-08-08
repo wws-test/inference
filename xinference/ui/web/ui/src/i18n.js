@@ -8,7 +8,7 @@ import zh from './locales/zh.json'
 
 i18n.use(initReactI18next).init({
   fallbackLng: 'en',
-  lng: localStorage.getItem('language') || 'en',
+  lng: localStorage.getItem('language') || 'zh',
   debug: true,
   interpolation: {
     escapeValue: false,
