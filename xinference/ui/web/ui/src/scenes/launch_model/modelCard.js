@@ -2461,7 +2461,7 @@ const ModelCard = ({
                     }}
                     label={t('launchModel.downloadHub.optional')}
                   >
-                    {['none', 'huggingface', 'modelscope', 'openmind_hub'].map(
+                    {['none', 'huggingface', 'modelscope', 'openmind_hub', 'lan_repository'].map(
                       (item) => {
                         return (
                           <MenuItem key={item} value={item}>

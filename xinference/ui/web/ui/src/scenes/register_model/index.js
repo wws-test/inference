@@ -100,7 +100,7 @@ const RegisterModel = () => {
               model_name: 'custom-embedding',
               dimensions: 768,
               max_tokens: 512,
-              language: ['en'],
+              language: ['zh'],
               model_specs: [
                 {
                   model_uri: '/path/to/llama-1',
@@ -121,7 +121,7 @@ const RegisterModel = () => {
               version: 2,
               model_name: 'custom-rerank',
               model_uri: '/path/to/rerank-model',
-              language: ['en'],
+              language: ['zh'],
               max_tokens: 512,
               virtualenv: {
                 packages: [],

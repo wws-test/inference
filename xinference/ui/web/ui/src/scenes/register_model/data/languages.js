@@ -28,7 +28,7 @@ const languagesArr = [
   { code: 'ch', language: 'Chamorro' },
   { code: 'ce', language: 'Chechen' },
   { code: 'ny', language: 'Chichewa, Chewa, Nyanja' },
-  // { code: 'zh', language: 'Chinese' },
+  { code: 'zh', language: 'Chinese' },
   { code: 'cv', language: 'Chuvash' },
   { code: 'kw', language: 'Cornish' },
   { code: 'co', language: 'Corsican' },
