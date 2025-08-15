@@ -2057,12 +2057,14 @@ const ModelCard = ({
                               'modelscope',
                               'openmind_hub',
                               'csghub',
+                              'lan_repository',
                             ]
                           : [
                               'none',
                               'huggingface',
                               'modelscope',
                               'openmind_hub',
+                              'lan_repository',
                             ]
                         ).map((item) => {
                           return (

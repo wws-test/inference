@@ -33,7 +33,7 @@ def match_embedding(
     model_format: Optional[str] = None,
     quantization: Optional[str] = None,
     download_hub: Optional[
-        Literal["huggingface", "modelscope", "openmind_hub", "csghub"]
+        Literal["huggingface", "modelscope", "openmind_hub", "csghub", "lan_repository"]
     ] = None,
 ) -> "EmbeddingModelFamilyV2":
     from ..utils import download_from_modelscope
@@ -59,6 +59,9 @@ def match_embedding(
         specs = [
             x for x in target_family.model_specs if x.model_hub == "modelscope"
         ] + [x for x in target_family.model_specs if x.model_hub == "huggingface"]
+    elif download_hub == "lan_repository":
+        # For lan_repository, we'll use huggingface specs but modify the model_id later
+        specs = [x for x in target_family.model_specs if x.model_hub == "huggingface"]
     else:
         specs = [x for x in target_family.model_specs if x.model_hub == "huggingface"]
 
@@ -71,12 +74,19 @@ def match_embedding(
         return _quantization if q.lower() == _quantization.lower() else None
 
     def _apply_format_to_model_id(
-        _spec: "EmbeddingSpecV1", q: str
+        _spec: "EmbeddingSpecV1", q: str, download_hub: Optional[str] = None
     ) -> "EmbeddingSpecV1":
         # Different quantized versions of some models use different model ids,
         # Here we check the `{}` in the model id to format the id.
         if _spec.model_id and "{" in _spec.model_id:
             _spec.model_id = _spec.model_id.format(quantization=q)
+        
+        # For lan_repository, modify the model_id to use LAN server
+        if download_hub == "lan_repository" and _spec.model_id:
+            # Extract model name from the original model_id
+            model_name = _spec.model_id.split('/')[-1] if '/' in _spec.model_id else _spec.model_id
+            _spec.model_id = f"http://192.2.29.9:8000/Model/{model_name}"
+        
         return _spec
 
     for spec in specs:
@@ -93,13 +103,13 @@ def match_embedding(
         _family = target_family.copy()
         if quantization:
             _family.model_specs = [
-                _apply_format_to_model_id(spec, matched_quantization)
+                _apply_format_to_model_id(spec, matched_quantization, download_hub)
             ]
             return _family
         else:
             # TODO: If user does not specify quantization, just use the first one
             _q = "none" if spec.model_format == "pytorch" else spec.quantization
-            _family.model_specs = [_apply_format_to_model_id(spec, _q)]
+            _family.model_specs = [_apply_format_to_model_id(spec, _q, download_hub)]
             return _family
 
     raise ValueError(

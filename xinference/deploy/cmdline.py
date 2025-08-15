@@ -20,6 +20,8 @@ import time
 import warnings
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
+logger = logging.getLogger(__name__)
+
 import click
 from tqdm.auto import tqdm
 from xoscar.utils import get_next_port
@@ -99,6 +101,8 @@ def start_local_cluster(
     metrics_exporter_host: Optional[str] = None,
     metrics_exporter_port: Optional[int] = None,
     auth_config_file: Optional[str] = None,
+    dev_mode: bool = False,
+    hot_reload_mode: bool = False,
 ):
     from .local import main
 
@@ -119,6 +123,8 @@ def start_local_cluster(
         metrics_exporter_port=metrics_exporter_port,
         logging_conf=dict_config,
         auth_config_file=auth_config_file,
+        dev_mode=dev_mode,
+        hot_reload_mode=hot_reload_mode,
     )
 
 
@@ -215,7 +221,87 @@ def cli(
     type=str,
     help="Specify the auth config json file.",
 )
+@click.option(
+    "--dev",
+    is_flag=True,
+    help="Start in development mode with hot reload for frontend.",
+)
+@click.option(
+    "--hot-reload",
+    is_flag=True,
+    help="Start in hot reload mode with automatic restart on code changes for both frontend and backend.",
+)
 def local(
+    log_level: str,
+    host: str,
+    port: int,
+    metrics_exporter_host: Optional[str],
+    metrics_exporter_port: Optional[int],
+    auth_config: Optional[str],
+    dev: bool,
+    hot_reload: bool,
+):
+    if metrics_exporter_host is None:
+        metrics_exporter_host = host
+    
+    # 如果启用了热更新模式，则同时启用开发模式
+    if hot_reload:
+        dev = True
+        logger.info("Hot reload mode enabled - starting in development mode with enhanced hot reload")
+    
+    start_local_cluster(
+        log_level=log_level,
+        host=host,
+        port=port,
+        metrics_exporter_host=metrics_exporter_host,
+        metrics_exporter_port=metrics_exporter_port,
+        auth_config_file=auth_config,
+        dev_mode=dev,
+        hot_reload_mode=hot_reload,
+    )
+
+
+@click.command(help="Starts an Xinference local cluster in development mode with hot reload.")
+@click.option(
+    "--log-level",
+    default="INFO",
+    type=str,
+    help="""Set the logger level. Options listed from most log to least log are:
+              DEBUG > INFO > WARNING > ERROR > CRITICAL (Default level is INFO)""",
+)
+@click.option(
+    "--host",
+    "-H",
+    default=XINFERENCE_DEFAULT_LOCAL_HOST,
+    type=str,
+    help="Specify the host address for the Xinference server.",
+)
+@click.option(
+    "--port",
+    "-p",
+    default=XINFERENCE_DEFAULT_ENDPOINT_PORT,
+    type=int,
+    help="Specify the port number for the Xinference server.",
+)
+@click.option(
+    "--metrics-exporter-host",
+    "-MH",
+    default=None,
+    type=str,
+    help="Specify the host address for the Xinference metrics exporter server, default is the same as --host.",
+)
+@click.option(
+    "--metrics-exporter-port",
+    "-mp",
+    type=int,
+    help="Specify the port number for the Xinference metrics exporter server.",
+)
+@click.option(
+    "--auth-config",
+    type=str,
+    help="Specify the auth config json file.",
+)
+def local_dev(
     log_level: str,
     host: str,
     port: int,
@@ -232,6 +318,7 @@ def local(
         metrics_exporter_host=metrics_exporter_host,
         metrics_exporter_port=metrics_exporter_port,
         auth_config_file=auth_config,
+        dev_mode=True,
     )
 
 

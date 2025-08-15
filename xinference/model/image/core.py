@@ -112,7 +112,7 @@ def generate_image_description(
 def match_diffusion(
     model_name: str,
     download_hub: Optional[
-        Literal["huggingface", "modelscope", "openmind_hub", "csghub"]
+        Literal["huggingface", "modelscope", "openmind_hub", "csghub", "lan_repository"]
     ] = None,
 ) -> ImageModelFamilyV2:
     from ..utils import download_from_modelscope
@@ -137,6 +137,18 @@ def match_diffusion(
                     if x.model_hub == "huggingface"
                 ]
             )[0]
+        elif download_hub == "lan_repository":
+            # For lan_repository, we'll use huggingface specs but modify the model_id later
+            spec = [
+                x
+                for x in BUILTIN_IMAGE_MODELS[model_name]
+                if x.model_hub == "huggingface"
+            ][0]
+            # Modify the model_id to use LAN server
+            if spec.model_id:
+                model_name_from_id = spec.model_id.split('/')[-1] if '/' in spec.model_id else spec.model_id
+                spec.model_id = f"http://192.2.29.9:8000/Model/{model_name_from_id}"
+            return spec
         else:
             return [
                 x
@@ -175,7 +187,7 @@ def create_image_model_instance(
     model_name: str,
     peft_model_config: Optional[PeftModelConfig] = None,
     download_hub: Optional[
-        Literal["huggingface", "modelscope", "openmind_hub", "csghub"]
+        Literal["huggingface", "modelscope", "openmind_hub", "csghub", "lan_repository"]
     ] = None,
     model_path: Optional[str] = None,
     gguf_quantization: Optional[str] = None,

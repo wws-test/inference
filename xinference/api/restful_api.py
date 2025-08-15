@@ -219,11 +219,15 @@ class RESTfulAPI(CancelMixin):
         host: str,
         port: int,
         auth_config_file: Optional[str] = None,
+        dev_mode: bool = False,
+        hot_reload_mode: bool = False,
     ):
         super().__init__()
         self._supervisor_address = supervisor_address
         self._host = host
         self._port = port
+        self._dev_mode = dev_mode
+        self._hot_reload_mode = hot_reload_mode
         self._supervisor_ref = None
         self._event_collector_ref = None
         self._auth_service = AuthService(auth_config_file)
@@ -905,8 +909,103 @@ class RESTfulAPI(CancelMixin):
         except ImportError as e:
             raise ImportError(f"Xinference is imported incorrectly: {e}")
 
-        if os.path.exists(ui_location):
-
+        if self._hot_reload_mode:
+            # Hot reload mode: enhanced development with file watching
+            logger.info("Starting in hot reload mode with enhanced development features...")
+            
+            # Start React dev server in background with enhanced monitoring
+            import subprocess
+            import threading
+            import time
+            import psutil
+            
+            def start_dev_server():
+                try:
+                    ui_dev_path = os.path.join(lib_location, "ui/web/ui/")
+                    if os.path.exists(ui_dev_path):
+                        # Check if npm is available
+                        try:
+                            subprocess.run(["npm", "--version"], check=True, capture_output=True)
+                        except (subprocess.CalledProcessError, FileNotFoundError):
+                            logger.error("npm is not available. Please install Node.js and npm.")
+                            return
+                        
+                        # Install dependencies if needed
+                        if not os.path.exists(os.path.join(ui_dev_path, "node_modules")):
+                            logger.info("Installing frontend dependencies...")
+                            subprocess.run(["npm", "install"], cwd=ui_dev_path, check=True)
+                        
+                        logger.info("Starting React development server...")
+                        subprocess.run(
+                            ["npm", "start"],
+                            cwd=ui_dev_path,
+                            check=True
+                        )
+                    else:
+                        logger.error(f"UI development directory not found: {ui_dev_path}")
+                except Exception as e:
+                    logger.error(f"Failed to start dev server: {e}")
+            
+            # Start dev server in background thread
+            dev_thread = threading.Thread(target=start_dev_server, daemon=True)
+            dev_thread.start()
+            
+            # Wait a bit for the dev server to start
+            time.sleep(2)
+            
+            # Redirect to React dev server
+            @self._app.get("/")
+            def read_main():
+                return RedirectResponse(url="http://localhost:3000")
+                
+            @self._app.get("/ui/")
+            def read_ui():
+                return RedirectResponse(url="http://localhost:3000")
+                
+            logger.info("Hot reload mode enabled!")
+            logger.info("Frontend development server: http://localhost:3000")
+            logger.info("Backend API server: http://{}:{}".format(self._host, self._port))
+            logger.info("Changes to frontend code will automatically reload in the browser")
+            
+        elif self._dev_mode:
+            # Basic development mode: start React dev server
+            logger.info("Starting in development mode...")
+            
+            # Start React dev server in background
+            import subprocess
+            import threading
+            
+            def start_dev_server():
+                try:
+                    ui_dev_path = os.path.join(lib_location, "ui/web/ui/")
+                    if os.path.exists(ui_dev_path):
+                        subprocess.run(
+                            ["npm", "start"],
+                            cwd=ui_dev_path,
+                            check=True
+                        )
+                    else:
+                        logger.error(f"UI development directory not found: {ui_dev_path}")
+                except Exception as e:
+                    logger.error(f"Failed to start dev server: {e}")
+            
+            # Start dev server in background thread
+            dev_thread = threading.Thread(target=start_dev_server, daemon=True)
+            dev_thread.start()
+            
+            # Redirect to React dev server
+            @self._app.get("/")
+            def read_main():
+                return RedirectResponse(url="http://localhost:3000")
+                
+            @self._app.get("/ui/")
+            def read_ui():
+                return RedirectResponse(url="http://localhost:3000")
+                
+            logger.info("Development server started. Frontend available at http://localhost:3000")
+            
+        elif os.path.exists(ui_location):
+            # Production mode: serve built static files
             @self._app.get("/")
             def read_main():
                 response = RedirectResponse(url="/ui/")
@@ -2609,6 +2708,8 @@ def run(
     port: int,
     logging_conf: Optional[dict] = None,
     auth_config_file: Optional[str] = None,
+    dev_mode: bool = False,
+    hot_reload_mode: bool = False,
 ):
     logger.info(f"Starting Xinference at endpoint: http://{host}:{port}")
     try:
@@ -2617,6 +2718,8 @@ def run(
             host=host,
             port=port,
             auth_config_file=auth_config_file,
+            dev_mode=dev_mode,
+            hot_reload_mode=hot_reload_mode,
         )
         api.serve(logging_conf=logging_conf)
     except SystemExit:
@@ -2632,6 +2735,8 @@ def run(
                 host=host,
                 port=port,
                 auth_config_file=auth_config_file,
+                dev_mode=dev_mode,
+                hot_reload_mode=hot_reload_mode,
             )
             api.serve(logging_conf=logging_conf)
         else:
@@ -2644,10 +2749,12 @@ def run_in_subprocess(
     port: int,
     logging_conf: Optional[dict] = None,
     auth_config_file: Optional[str] = None,
+    dev_mode: bool = False,
+    hot_reload_mode: bool = False,
 ) -> multiprocessing.Process:
     p = multiprocessing.Process(
         target=run,
-        args=(supervisor_address, host, port, logging_conf, auth_config_file),
+        args=(supervisor_address, host, port, logging_conf, auth_config_file, dev_mode, hot_reload_mode),
     )
     p.daemon = True
     p.start()

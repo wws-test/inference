@@ -80,7 +80,7 @@ def generate_video_description(
 def match_diffusion(
     model_name: str,
     download_hub: Optional[
-        Literal["huggingface", "modelscope", "openmind_hub", "csghub"]
+        Literal["huggingface", "modelscope", "openmind_hub", "csghub", "lan_repository"]
     ] = None,
 ) -> VideoModelFamilyV2:
     from ..utils import download_from_modelscope
@@ -93,6 +93,14 @@ def match_diffusion(
                 [x for x in model_families if x.model_hub == "modelscope"]
                 + [x for x in model_families if x.model_hub == "huggingface"]
             )[0]
+        elif download_hub == "lan_repository":
+            # For lan_repository, we'll use huggingface specs but modify the model_id later
+            spec = [x for x in model_families if x.model_hub == "huggingface"][0]
+            # Modify the model_id to use LAN server
+            if spec.model_id:
+                model_name_from_id = spec.model_id.split('/')[-1] if '/' in spec.model_id else spec.model_id
+                spec.model_id = f"http://192.2.29.9:8000/Model/{model_name_from_id}"
+            return spec
         else:
             return [x for x in model_families if x.model_hub == "huggingface"][0]
     else:
@@ -106,7 +114,7 @@ def create_video_model_instance(
     model_uid: str,
     model_name: str,
     download_hub: Optional[
-        Literal["huggingface", "modelscope", "openmind_hub", "csghub"]
+        Literal["huggingface", "modelscope", "openmind_hub", "csghub", "lan_repository"]
     ] = None,
     model_path: Optional[str] = None,
     **kwargs,

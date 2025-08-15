@@ -27,7 +27,7 @@ def create_model_instance(
     quantization: Optional[str] = None,
     peft_model_config: Optional[PeftModelConfig] = None,
     download_hub: Optional[
-        Literal["huggingface", "modelscope", "openmind_hub", "csghub"]
+        Literal["huggingface", "modelscope", "openmind_hub", "csghub", "lan_repository"]
     ] = None,
     model_path: Optional[str] = None,
     **kwargs,

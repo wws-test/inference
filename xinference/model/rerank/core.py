@@ -436,7 +436,7 @@ def create_rerank_model_instance(
     model_uid: str,
     model_name: str,
     download_hub: Optional[
-        Literal["huggingface", "modelscope", "openmind_hub", "csghub"]
+        Literal["huggingface", "modelscope", "openmind_hub", "csghub", "lan_repository"]
     ] = None,
     model_path: Optional[str] = None,
     **kwargs,
@@ -460,6 +460,13 @@ def create_rerank_model_instance(
                     [x for x in model_specs if x.model_hub == "modelscope"]
                     + [x for x in model_specs if x.model_hub == "huggingface"]
                 )[0]
+            elif download_hub == "lan_repository":
+                # For lan_repository, we'll use huggingface specs but modify the model_id later
+                model_spec = [x for x in model_specs if x.model_hub == "huggingface"][0]
+                # Modify the model_id to use LAN server
+                if model_spec.model_id:
+                    model_name_from_id = model_spec.model_id.split('/')[-1] if '/' in model_spec.model_id else model_spec.model_id
+                    model_spec.model_id = f"http://192.2.29.9:8000/Model/{model_name_from_id}"
             else:
                 model_spec = [x for x in model_specs if x.model_hub == "huggingface"][0]
         else:

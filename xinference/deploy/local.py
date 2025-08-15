@@ -151,6 +151,8 @@ def main(
     metrics_exporter_port: Optional[int] = None,
     logging_conf: Optional[Dict] = None,
     auth_config_file: Optional[str] = None,
+    dev_mode: bool = False,
+    hot_reload_mode: bool = False,
 ):
     supervisor_address = f"{host}:{get_next_port()}"
     local_cluster = run_in_subprocess(
@@ -173,6 +175,8 @@ def main(
             port=port,
             logging_conf=logging_conf,
             auth_config_file=auth_config_file,
+            dev_mode=dev_mode,
+            hot_reload_mode=hot_reload_mode,
         )
     finally:
         local_cluster.kill()

@@ -472,7 +472,7 @@ def match_llm(
     model_size_in_billions: Optional[Union[int, str]] = None,
     quantization: Optional[str] = None,
     download_hub: Optional[
-        Literal["huggingface", "modelscope", "openmind_hub", "csghub"]
+        Literal["huggingface", "modelscope", "openmind_hub", "csghub", "lan_repository"]
     ] = None,
 ) -> Optional[LLMFamilyV2]:
     """
@@ -490,11 +490,19 @@ def match_llm(
             return None
         return quant
 
-    def _apply_format_to_model_id(_spec: "LLMSpecV1", q: str) -> "LLMSpecV1":
+    def _apply_format_to_model_id(_spec: "LLMSpecV1", q: str, download_hub: Optional[str] = None) -> "LLMSpecV1":
         # Different quantized versions of some models use different model ids,
         # Here we check the `{}` in the model id to format the id.
         if _spec.model_id and "{" in _spec.model_id:
             _spec.model_id = _spec.model_id.format(quantization=q)
+        
+        # For lan_repository, modify the model_id to use LAN server
+        if download_hub == "lan_repository" and _spec.model_id:
+            # Extract model name from the original model_id
+            # Assuming model_id format is like "microsoft/DialoGPT-medium" or "gpt2"
+            model_name = _spec.model_id.split('/')[-1] if '/' in _spec.model_id else _spec.model_id
+            _spec.model_id = f"http://192.2.29.9:8000/Model/{model_name}"
+        
         return _spec
 
     def _get_model_specs(
@@ -514,6 +522,9 @@ def match_llm(
         if download_hub is not None:
             if download_hub == "huggingface":
                 model_specs = _get_model_specs(family.model_specs, download_hub)
+            elif download_hub == "lan_repository":
+                # For lan_repository, we'll use huggingface specs but modify the model_id later
+                model_specs = _get_model_specs(family.model_specs, "huggingface")
             else:
                 model_specs = _get_model_specs(
                     family.model_specs, download_hub
@@ -553,13 +564,13 @@ def match_llm(
             _llm_family = family.copy()
             if quantization:
                 _llm_family.model_specs = [
-                    _apply_format_to_model_id(spec, matched_quantization)
+                    _apply_format_to_model_id(spec, matched_quantization, download_hub)
                 ]
                 return _llm_family
             else:
                 # TODO: If user does not specify quantization, just use the first one
                 _q = "none" if spec.model_format == "pytorch" else spec.quantization
-                _llm_family.model_specs = [_apply_format_to_model_id(spec, _q)]
+                _llm_family.model_specs = [_apply_format_to_model_id(spec, _q, download_hub)]
                 return _llm_family
     return None
 
